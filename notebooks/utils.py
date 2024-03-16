@@ -12,19 +12,54 @@ from botocore.exceptions import ClientError
 
 from uuid import uuid4
 
-uuidChars = ("a", "b", "c", "d", "e", "f",
-       "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s",
-       "t", "u", "v", "w", "x", "y", "z", "0", "1", "2", "3", "4", "5",
-       "6", "7", "8", "9")
+uuidChars = (
+    "a",
+    "b",
+    "c",
+    "d",
+    "e",
+    "f",
+    "g",
+    "h",
+    "i",
+    "j",
+    "k",
+    "l",
+    "m",
+    "n",
+    "o",
+    "p",
+    "q",
+    "r",
+    "s",
+    "t",
+    "u",
+    "v",
+    "w",
+    "x",
+    "y",
+    "z",
+    "0",
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+)
+
 
 def short_uuid():
-  uuid = str(uuid4()).replace('-', '')
-  result = ''
-  for i in range(0,8):
-    sub = uuid[i * 4: i * 4 + 4]
-    x = int(sub,16)
-    result += uuidChars[x % 0x24]
-  return result
+    uuid = str(uuid4()).replace("-", "")
+    result = ""
+    for i in range(0, 8):
+        sub = uuid[i * 4 : i * 4 + 4]
+        x = int(sub, 16)
+        result += uuidChars[x % 0x24]
+    return result
 
 
 def progress_bar(seconds):
@@ -35,8 +70,13 @@ def progress_bar(seconds):
         sys.stdout.flush()
     print()
 
-logging.basicConfig(format='[%(asctime)s] p%(process)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s', level=logging.INFO)
+
+logging.basicConfig(
+    format="[%(asctime)s] p%(process)s {%(filename)s:%(lineno)d} %(levelname)s - %(message)s",
+    level=logging.INFO,
+)
 logger = logging.getLogger(__name__)
+
 
 def create_role(iam, role_name, allowed_services):
     trust_policy = {
@@ -103,218 +143,223 @@ def create_policy(iam, name, description, actions, resource_arn):
         return policy
 
 
-
 def createEncryptionPolicy(client, collection_name, id):
-    name = f'bedrock-kb-demo-{id}'
-    policy=json.dumps({
-        "Rules":
-        [
-            {
-                "ResourceType":"collection",
-                "Resource":[f"collection/{collection_name}"]
-            }
-        ],
-        "AWSOwnedKey":True
-        })
+    name = f"bedrock-kb-demo-{id}"
+    policy = json.dumps(
+        {
+            "Rules": [
+                {
+                    "ResourceType": "collection",
+                    "Resource": [f"collection/{collection_name}"],
+                }
+            ],
+            "AWSOwnedKey": True,
+        }
+    )
     print(policy)
     try:
         response = client.create_security_policy(
-            description=f'Encryption policy for {collection_name} collections',
+            description=f"Encryption policy for {collection_name} collections",
             name=name,
             policy=policy,
-            type='encryption'
+            type="encryption",
         )
 
-        print('\nEncryption policy created:')
+        print("\nEncryption policy created:")
         print(response)
     except ClientError as error:
-        if error.response['Error']['Code'] == 'ConflictException':
+        if error.response["Error"]["Code"] == "ConflictException":
             print(
-                '[ConflictException] The policy name or rules conflict with an existing policy.')
+                "[ConflictException] The policy name or rules conflict with an existing policy."
+            )
         else:
             raise error
     return name
 
+
 def createNetworkPolicy(client, collection_name, id):
     """Creates a network policy that matches all collections beginning with bedrock-knowledge-*"""
-    name = f'bedrock-kb-demo-{id}'
-    policy=[
+    name = f"bedrock-kb-demo-{id}"
+    policy = [
         {
-            "Description":"Public access for TV collection",
-            "Rules":[
+            "Description": "Public access for TV collection",
+            "Rules": [
                 {
-                    "ResourceType":"dashboard",
-                    "Resource":[f"collection/{collection_name}"]
+                    "ResourceType": "dashboard",
+                    "Resource": [f"collection/{collection_name}"],
                 },
                 {
-                    "ResourceType":"collection",
-                    "Resource":[f"collection/{collection_name}"]
-                }
+                    "ResourceType": "collection",
+                    "Resource": [f"collection/{collection_name}"],
+                },
             ],
-            "AllowFromPublic":True
-        }]
+            "AllowFromPublic": True,
+        }
+    ]
 
     try:
         response = client.create_security_policy(
-            description=f'Network policy for {collection_name} collections',
+            description=f"Network policy for {collection_name} collections",
             name=name,
             policy=json.dumps(policy),
-            type='network'
+            type="network",
         )
-        print('\nNetwork policy created:')
+        print("\nNetwork policy created:")
         print(response)
     except ClientError as error:
-        if error.response['Error']['Code'] == 'ConflictException':
-            print(
-                '[ConflictException] A network policy with this name already exists.')
+        if error.response["Error"]["Code"] == "ConflictException":
+            print("[ConflictException] A network policy with this name already exists.")
         else:
             raise error
     return name
 
 
 def createAccessPolicy(client, index_name, collection_name, role_arn, account_id, id):
-    name = f'bedrock-kb-demo-{id}'
-    policy = [{
-    "Rules":[
+    name = f"bedrock-kb-demo-{id}"
+    policy = [
+        {
+            "Rules": [
                 {
-                        "Resource":[f"index/{index_name}/*"],
-                        "Permission":["aoss:CreateIndex","aoss:DeleteIndex","aoss:UpdateIndex","aoss:DescribeIndex","aoss:ReadDocument","aoss:WriteDocument"],
-                        "ResourceType": "index"
+                    "Resource": [f"index/{index_name}/*"],
+                    "Permission": [
+                        "aoss:CreateIndex",
+                        "aoss:DeleteIndex",
+                        "aoss:UpdateIndex",
+                        "aoss:DescribeIndex",
+                        "aoss:ReadDocument",
+                        "aoss:WriteDocument",
+                    ],
+                    "ResourceType": "index",
                 },
                 {
-                        "Resource":[
-                            f"collection/{collection_name}"
-                        ],
-                        "Permission":[
-                            "aoss:CreateCollectionItems",
-                            "aoss:DescribeCollectionItems",
-                            "aoss:UpdateCollectionItems"
-                        ],
-                        "ResourceType": "collection"
-                }
-                ],
-                "Principal":[
-                    f"{role_arn}",
-                    f"arn:aws:iam::{account_id}:role/Admin"
-                ]
-        }]
+                    "Resource": [f"collection/{collection_name}"],
+                    "Permission": [
+                        "aoss:CreateCollectionItems",
+                        "aoss:DescribeCollectionItems",
+                        "aoss:UpdateCollectionItems",
+                    ],
+                    "ResourceType": "collection",
+                },
+            ],
+            "Principal": [f"{role_arn}", f"arn:aws:iam::{account_id}:role/Admin"],
+        }
+    ]
 
     try:
         response = client.create_access_policy(
             description=f'Data access policy for "{collection_name}" collections',
             name=name,
             policy=json.dumps(policy),
-            type='data'
+            type="data",
         )
         policyVersion = response["accessPolicyDetail"]["policyVersion"]
-        print('\nAccess policy created:')
+        print("\nAccess policy created:")
         print(response)
     except ClientError as error:
-        if error.response['Error']['Code'] == 'ConflictException':
-            print(
-                '[ConflictException] An access policy with this name already exists.')
+        if error.response["Error"]["Code"] == "ConflictException":
+            print("[ConflictException] An access policy with this name already exists.")
         else:
             raise error
-    
+
     return name, policyVersion
 
 
 def updateAccessPolicy(
-        client,
-        index_name,
-        collection_name,
-        role_arn,
-        account_id,
-        name,
-        bedrock_knowledge_base_role_name,
-        policy_version
-        ):
-    
-    policy = [{
-        "Rules":[
-                    {
-                            "Resource":[f"index/{index_name}/*"],
-                            "Permission":["aoss:CreateIndex","aoss:DeleteIndex","aoss:UpdateIndex","aoss:DescribeIndex","aoss:ReadDocument","aoss:WriteDocument"],
-                            "ResourceType": "index"
-                    },
-                    {
-                            "Resource":[
-                                f"collection/{collection_name}"
-                            ],
-                            "Permission":[
-                                "aoss:CreateCollectionItems",
-                                "aoss:DescribeCollectionItems",
-                                "aoss:UpdateCollectionItems"
-                            ],
-                            "ResourceType": "collection"
-                    }
+    client,
+    index_name,
+    collection_name,
+    role_arn,
+    account_id,
+    name,
+    bedrock_knowledge_base_role_name,
+    policy_version,
+):
+
+    policy = [
+        {
+            "Rules": [
+                {
+                    "Resource": [f"index/{index_name}/*"],
+                    "Permission": [
+                        "aoss:CreateIndex",
+                        "aoss:DeleteIndex",
+                        "aoss:UpdateIndex",
+                        "aoss:DescribeIndex",
+                        "aoss:ReadDocument",
+                        "aoss:WriteDocument",
                     ],
-                    "Principal":[
-                        f"arn:aws:iam::{account_id}:role/{bedrock_knowledge_base_role_name}",
-                        f"{role_arn}",
-                        f"arn:aws:iam::{account_id}:role/Admin"
-                    ]
-            }]
+                    "ResourceType": "index",
+                },
+                {
+                    "Resource": [f"collection/{collection_name}"],
+                    "Permission": [
+                        "aoss:CreateCollectionItems",
+                        "aoss:DescribeCollectionItems",
+                        "aoss:UpdateCollectionItems",
+                    ],
+                    "ResourceType": "collection",
+                },
+            ],
+            "Principal": [
+                f"arn:aws:iam::{account_id}:role/{bedrock_knowledge_base_role_name}",
+                f"{role_arn}",
+                f"arn:aws:iam::{account_id}:role/Admin",
+            ],
+        }
+    ]
     try:
         response = client.update_access_policy(
-            description=f'Data access policy for {collection_name} collections',
+            description=f"Data access policy for {collection_name} collections",
             name=name,
             policy=json.dumps(policy),
-            type='data',
-            policyVersion=policy_version
+            type="data",
+            policyVersion=policy_version,
         )
-        print('\nAccess policy updated:')
+        print("\nAccess policy updated:")
         print(response)
     except ClientError as error:
-        if error.response['Error']['Code'] == 'ConflictException':
-            print(
-                '[ConflictException] An access policy with this name already exists.')
+        if error.response["Error"]["Code"] == "ConflictException":
+            print("[ConflictException] An access policy with this name already exists.")
         else:
             raise error
+
 
 def createCollection(client, collection_name):
     """Creates a collection"""
     try:
-        response = client.create_collection(
-            name=collection_name,
-            type='VECTORSEARCH'
-        )
+        response = client.create_collection(name=collection_name, type="VECTORSEARCH")
         print(response)
         # collection_id = response["collectionDetails"]["id"]
-        return (response)
+        return response
     except ClientError as error:
-        if error.response['Error']['Code'] == 'ConflictException':
+        if error.response["Error"]["Code"] == "ConflictException":
             print(
-                '[ConflictException] A collection with this name already exists. Try another name.')
+                "[ConflictException] A collection with this name already exists. Try another name."
+            )
         else:
             raise error
-    
 
 
 def waitForCollectionCreation(client, collection_name):
     """Waits for the collection to become active"""
-    response = client.batch_get_collection(
-        names=[collection_name])
+    response = client.batch_get_collection(names=[collection_name])
     # Periodically check collection status
     print(response)
-    while (response['collectionDetails'][0]['status']) == 'CREATING':
-        print('Creating collection...')
+    while (response["collectionDetails"][0]["status"]) == "CREATING":
+        print("Creating collection...")
         time.sleep(30)
-        response = client.batch_get_collection(
-            names=[collection_name])
-    print('\nCollection successfully created:')
+        response = client.batch_get_collection(names=[collection_name])
+    print("\nCollection successfully created:")
     print(response["collectionDetails"])
     # Extract the collection endpoint from the response
-    host = response['collectionDetails'][0]['collectionEndpoint']
-    collectionarn = response['collectionDetails'][0]['arn']
+    host = response["collectionDetails"][0]["collectionEndpoint"]
+    collectionarn = response["collectionDetails"][0]["arn"]
     collection_id = response["collectionDetails"][0]["id"]
     final_host = host.replace("https://", "")
-    return final_host, collectionarn, collection_id 
+    return final_host, collectionarn, collection_id
 
 
-def create_deployment_package(
-        source_file,
-        destination_file):
+def create_deployment_package(source_file, destination_file):
     """
     Creates a Lambda deployment package in .zip format in an in-memory buffer. This
     buffer can be passed directly to Lambda when creating the function.
@@ -330,13 +375,10 @@ def create_deployment_package(
     buffer.seek(0)
     return buffer.read()
 
+
 def create_function(
-        lambda_client,
-        function_name, 
-        handler_name,
-        iam_role,
-        deployment_package
-    ):
+    lambda_client, function_name, handler_name, iam_role, deployment_package
+):
     """
     Deploys a Lambda function.
 
@@ -393,7 +435,7 @@ def teardown(iam, roles):
                     attached.delete_version()
                     response = iam.delete_policy_version(
                         PolicyArn=attached.arn,
-                        VersionId=response['Versions']['VersionId']
+                        VersionId=response["Versions"]["VersionId"],
                     )
                     print(response)
                 print(f"Detached and deleted {policy_name}.")
